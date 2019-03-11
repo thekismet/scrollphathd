@@ -1,0 +1,297 @@
+#!/usr/bin/env python
+# encoding: utf-8
+import sys
+import os
+import shutil
+import time
+import urllib2
+import json
+import unicodedata
+import scrollphathd
+from scrollphathd.fonts import font5x7
+ 
+ 
+reload(sys)
+sys.setdefaultencoding("utf-8")
+ 
+ 
+# Get the temperature from the FRITZ!DECT 200
+try:
+    process = os.popen('sudo ./fritztemp.sh')
+    fritztemp = process.read()
+    process.close()
+ 
+    fritztemp = fritztemp.replace(',', '.')
+    fritztemp = fritztemp.replace('\n', '')
+except:
+    fritztemp = '-'
+ 
+indoortemp = 'Innentemperatur: ' + fritztemp + ' ' + unichr(20) + 'C'
+ 
+ 
+# Get the air quality from ThingSpeak
+try:
+    f = urllib2.urlopen('http://api.thingspeak.com/channels/YOURCHANNELID/feeds/last.json?api_key=YOURTHINGSPEAKAPIKEY')
+    json_string = f.read()
+    parsed_json = json.loads(json_string)
+    ppm = parsed_json['YOURFIELDNAME']
+    f.close()
+ 
+    ppm_float = float(ppm)
+ 
+    smiley = ''
+    if (ppm_float < 1000):
+       smiley = ' ' + unichr(40) + unichr(2) + unichr(41)
+    elif (ppm_float >= 1000 and ppm_float < 1500):
+       smiley = ' ' + unichr(40) + unichr(3) + unichr(41)
+    elif (ppm_float >= 1500):
+       smiley = ' ' + unichr(40) + unichr(4) + unichr(41)
+except:
+    ppm = '-'
+    smiley = ''
+ 
+airquality = 'Luftqualit' + unichr(145) + 't: ' + ppm + ' ppm' + smiley
+ 
+ 
+# Get the weather data from Weather Underground
+try:
+    f = urllib2.urlopen('http://api.wunderground.com/api/YOURAPIKEYHERE/geolookup/conditions/q/pws:YOURSTATIONIDHERE.json')
+    json_string = f.read()
+    parsed_json = json.loads(json_string)
+    temp_c = parsed_json['current_observation']['temp_c']
+    relative_humidity = parsed_json['current_observation']['relative_humidity']
+    relative_humidity = relative_humidity.replace('%', '')
+    pressure_in = parsed_json['current_observation']['pressure_in']
+    pressure_trend = parsed_json['current_observation']['pressure_trend']
+    conditions = parsed_json['current_observation']['weather']
+    f.close()
+ 
+    temp_str = '%.1f' % temp_c
+    press_float = float(pressure_in)
+    press_float = press_float*33.8637526
+    press_str =  '%.1f' % press_float
+ 
+    trend = ''
+    if pressure_trend == '0':
+      trend = ' ' + unichr(28)
+    elif pressure_trend == '+':
+      trend = ' ' + unichr(30)
+    elif pressure_trend == '-':
+      trend = ' ' + unichr(31)
+ 
+    conditions = conditions.replace('Light ', '')
+    conditions = conditions.replace('Heavy ', '')
+ 
+    # Make a German translation
+    if conditions == 'Drizzle':
+      conditions = conditions.replace('Drizzle', 'Nieselregen')
+    elif conditions == 'Rain':
+      conditions = conditions.replace('Rain', 'Regen')
+    elif conditions == 'Snow':
+      conditions = conditions.replace('Snow', 'Schnee')
+    elif conditions == 'Snow Grains':
+      conditions = conditions.replace('Snow Grains', 'Griesel')
+    elif conditions == 'Ice Crystals':
+      conditions = conditions.replace('Ice Crystals', 'Eisgl' + unichr(145) + 'tte')
+    elif conditions == 'Ice Pellets':
+      conditions = conditions.replace('Ice Pellets', 'Graupel')
+    elif conditions == 'Hail':
+      conditions = conditions.replace('Hail', 'Hagel')
+    elif conditions == 'Mist':
+      conditions = conditions.replace('Mist', 'Feuchter Dunst')
+    elif conditions == 'Fog':
+      conditions = conditions.replace('Fog', 'Nebel')
+    elif conditions == 'Fog Patches':
+      conditions = conditions.replace('Fog Patches', 'Nebelschwaden')
+    elif conditions == 'Smoke':
+      conditions = conditions.replace('Smoke', 'Rauch')
+    elif conditions == 'Volcanic Ash':
+      conditions = conditions.replace('Volcanic Ash', 'Vulkanasche')
+    elif conditions == 'Widespread Dust':
+      conditions = conditions.replace('Widespread Dust', 'Verbreitet staubig')
+    elif conditions == 'Sand':
+      conditions = conditions.replace('Sand', 'Sandig')
+    elif conditions == 'Haze':
+      conditions = conditions.replace('Haze', 'Dunst')
+    elif conditions == 'Spray':
+      conditions = conditions.replace('Spray', 'Spr' + unichr(177) + 'hregen')
+    elif conditions == 'Dust Whirls':
+      conditions = conditions.replace('Dust Whirls', 'Wirbelwind')
+    elif conditions == 'Sandstorm':
+      conditions = conditions.replace('Sandstorm', 'Sandsturm')
+    elif conditions == 'Low Drifting Snow':
+      conditions = conditions.replace('Low Drifting Snow', 'Schneeverwehungen')
+    elif conditions == 'Low Drifting Widespread Dust':
+      conditions = conditions.replace('Low Drifting Widespread Dust', 'Staubverwehungen')
+    elif conditions == 'Low Drifting Sand':
+      conditions = conditions.replace('Low Drifting Sand', 'Sandverwehungen')
+    elif conditions == 'Blowing Snow':
+      conditions = conditions.replace('Blowing Snow', 'Schneetreiben')
+    elif conditions == 'Blowing Widespread Dust':
+      conditions = conditions.replace('Blowing Widespread Dust', 'Staubtreiben')
+    elif conditions == 'Blowing Sand':
+      conditions = conditions.replace('Blowing Sand', 'Sandtreiben')
+    elif conditions == 'Rain Mist':
+      conditions = conditions.replace('Rain Mist', 'Spr' + unichr(177) + 'hregen')
+    elif conditions == 'Rain Showers':
+      conditions = conditions.replace('Rain Showers', 'Regenschauer')
+    elif conditions == 'Snow Showers':
+      conditions = conditions.replace('Snow Showers', 'Schneeschauer')
+    elif conditions == 'Snow Blowing Snow Mist':
+      conditions = conditions.replace('Snow Blowing Snow Mist', 'Schneegest' + unichr(169) + 'ber')
+    elif conditions == 'Ice Pellet Showers':
+      conditions = conditions.replace('Ice Pellet Showers', 'Graupelschauer')
+    elif conditions == 'Hail Showers':
+      conditions = conditions.replace('Hail Showers', 'Hagelschauer')
+    elif conditions == 'Small Hail Showers':
+      conditions = conditions.replace('Small Hail Showers', 'Kleink' + unichr(169) + 'rniger Hagelschauer')
+    elif conditions == 'Thunderstorm':
+      conditions = conditions.replace('Thunderstorm', 'Gewitter')
+    elif conditions == 'Thunderstorms and Rain':
+      conditions = conditions.replace('Thunderstorms and Rain', 'Gewitter und Regen')
+    elif conditions == 'Thunderstorms and Snow':
+      conditions = conditions.replace('Thunderstorms and Snow', 'Gewitter und Schnee')
+    elif conditions == 'Thunderstorms and Ice Pellets':
+      conditions = conditions.replace('Thunderstorms and Ice Pellets', 'Gewitter und Graupel')
+    elif conditions == 'Thunderstorms with Hail':
+      conditions = conditions.replace('Thunderstorms with Hail', 'Gewitter mit Hagel')
+    elif conditions == 'Thunderstorms with Small Hail':
+      conditions = conditions.replace('Thunderstorms with Small Hail', 'Gewitter mit kleink' + unichr(169) + 'rnigem Hagel')
+    elif conditions == 'Freezing Drizzle':
+      conditions = conditions.replace('Freezing Drizzle', 'Ueberfrierender Nieselregen')
+    elif conditions == 'Freezing Rain':
+      conditions = conditions.replace('Freezing Rain', 'Ueberfrierender Regen')
+    elif conditions == 'Freezing Fog':
+      conditions = conditions.replace('Freezing Fog', 'Ueberfrierender Nebel')
+    elif conditions == 'Patches of Fog':
+      conditions = conditions.replace('Patches of Fog', 'Nebelfelder')
+    elif conditions == 'Shallow Fog':
+      conditions = conditions.replace('Shallow Fog', 'Bodennebel')
+    elif conditions == 'Partial Fog':
+      conditions = conditions.replace('Partial Fog ', 'Teilweise neblig')
+    elif conditions == 'Overcast':
+      conditions = conditions.replace('Overcast', 'Bedeckt')
+    elif conditions == 'Clear':
+      conditions = conditions.replace('Clear', 'Klar')
+    elif conditions == 'Partly Cloudy':
+      conditions = conditions.replace('Partly Cloudy', 'Teilweise bew' + unichr(169) + 'lkt')
+    elif conditions == 'Mostly Cloudy':
+      conditions = conditions.replace('Mostly Cloudy', 'Meist bew' + unichr(169) + 'lkt')
+    elif conditions == 'Cloudy':
+      conditions = conditions.replace('Cloudy', 'Bew' + unichr(169) + 'lkt')
+    elif conditions == 'Scattered Clouds':
+      conditions = conditions.replace('Scattered Clouds', 'Aufgelockerte Bew' + unichr(169) + 'lkung')
+    elif conditions == 'Small Hail':
+      conditions = conditions.replace('Small Hail', 'Graupel')
+    elif conditions == 'Squalls':
+      conditions = conditions.replace('Squalls', 'Sturmb' + unichr(169) + 'en')
+    elif conditions == 'Funnel Cloud':
+      conditions = conditions.replace('Funnel Cloud', 'Trichterwolke')
+    elif conditions == 'Unknown Precipitation':
+      conditions = conditions.replace('Unknown Precipitation', 'Unbekannter Niederschlag')
+    elif conditions == 'Unknown':
+      conditions = conditions.replace('Unknown', 'Unbekannt')
+except:
+    temp_str = '-'
+    relative_humidity = '-'
+    press_str = '-'
+    trend = ''
+    conditions = '-'
+ 
+weather = 'Aussentemperatur: ' + temp_str + ' ' + unichr(20) + 'C -' + ' Aussenluftfeuchtigkeit: ' + relative_humidity + ' % -' + ' Relativer Luftdruck: ' + press_str + ' hPa' + trend + ' -' + ' Wetterbedingungen: '  + conditions
+ 
+ 
+# Get the gas price from Tankerkönig
+try:
+    f = urllib2.urlopen('https://creativecommons.tankerkoenig.de/json/detail.php?id=DESIREDSTATIONID&apikey=YOURAPIKEY')
+    json_string = f.read()
+    parsed_json = json.loads(json_string)
+    gas = parsed_json['station']['e5']
+    f.close()
+ 
+    gas_str = '%.2f' % gas
+except:
+    gas_str = '-'
+ 
+if gas_str == '-':
+    gasprice = 'Benzinpreis Super E5: ' + gas_str + ' ' + unichr(91)
+else:
+    gasprice = 'Benzinpreis Super E5: ' + gas_str + unichr(36) + ' ' + unichr(91)
+ 
+ 
+space = '    '
+hyphen = ' - '
+indoor = indoortemp + hyphen + airquality + space
+weather = weather + space
+gasprice = gasprice + space
+ 
+ 
+# Show the thext on the display
+for x in range(0, 6):
+    try:
+        # Get the weekday, date and time
+        datetime = time.strftime('%A, %d.%m.%Y - %H:%M Uhr')
+        # Make a German translation
+        datetime = datetime.replace('Monday', 'Montag')
+        datetime = datetime.replace('Tuesday', 'Dienstag')
+        datetime = datetime.replace('Wednesday', 'Mittwoch')
+        datetime = datetime.replace('Thursday', 'Donnerstag')
+        datetime = datetime.replace('Friday', 'Freitag')
+        datetime = datetime.replace('Saturday', 'Samstag')
+        datetime = datetime.replace('Sunday', 'Sonntag')
+ 
+        datetime = datetime + space
+ 
+        scrollphathd.clear()
+        scrollphathd.set_brightness(0.2)
+ 
+        lines = [datetime,
+                 indoor,
+                 weather,
+                 gasprice]
+ 
+        line_height = scrollphathd.DISPLAY_HEIGHT + 2
+        offset_left = 0
+ 
+        lengths = [0] * len(lines)
+        for line, text in enumerate(lines):
+            lengths[line] = scrollphathd.write_string(text, x=offset_left, y=line_height * line, font=euro5x7)
+            offset_left += lengths[line]
+ 
+        scrollphathd.set_pixel(offset_left - 1, (len(lines) * line_height) - 1, 0)
+ 
+        period = 96
+        length = lengths[0] + lengths[1] + lengths[2] + lengths[3]
+        # Factor bigger  -> Delay shorter -> Text runs faster
+        # Factor smaller -> Delay longer  -> Text runs slower
+        delay = period/(length*float(2.8))
+        # The relationship between the amount of horizontal pixels and the scroll time is not linearly dependent 
+        # Therefore, do a correction based on meassurements to adapt it to the conditions observed in reality
+        delay = ((-0.0013889*length)+2.83472)*delay
+ 
+        scrollphathd.scroll_to(0, 0)
+        scrollphathd.show()
+ 
+        # Scroll the text
+        for current_line, line_length in enumerate(lengths):
+            # Delay a slightly longer time at the start of each line
+            time.sleep(delay*10)
+ 
+            # Scroll to the end of the current line
+            for x in range(line_length):
+                scrollphathd.scroll(1, 0)
+                scrollphathd.show()
+                time.sleep(delay)
+ 
+            if current_line != len(lines) - 1:
+                # Progress to the next line by scrolling upwards
+                for y in range(line_height):
+                    scrollphathd.scroll(0, 1)
+                    scrollphathd.show()
+                    time.sleep(delay)
+    except:
+        scrollphathd.clear()
+        sys.exit(-1)
+ 
+ 
+scrollphathd.clear()
